@@ -25,8 +25,6 @@
     if (self)
     {
         self.title = @"SDWebImage";
-//        self.tableView.estimatedRowHeight = 50;
-//        self.tableView.rowHeight = UITableViewAutomaticDimension;
         self.navigationItem.rightBarButtonItem = [UIBarButtonItem.alloc initWithTitle:@"Clear Cache"
                                                                                 style:UIBarButtonItemStylePlain
                                                                                target:self
@@ -95,6 +93,9 @@
 
     cell.textLabel.text = [NSString stringWithFormat:@"Image #%ld", (long)indexPath.row];
     cell.imageView.contentMode = UIViewContentModeScaleAspectFill;
+    /*
+     * 一般使用的是SDWebImageRetryFailed | SDWebImageLowPriority
+     */
     [cell.imageView sd_setImageWithURL:[NSURL URLWithString:[_objects objectAtIndex:indexPath.row]]
                       placeholderImage:[UIImage imageNamed:@"placeholder"] options:indexPath.row == 0 ? SDWebImageRefreshCached : 0];
     return cell;

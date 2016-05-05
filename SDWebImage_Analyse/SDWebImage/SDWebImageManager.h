@@ -15,23 +15,30 @@ typedef NS_OPTIONS(NSUInteger, SDWebImageOptions) {
     /**
      * By default, when a URL fail to be downloaded, the URL is blacklisted so the library won't keep trying.
      * This flag disable this blacklisting.
+     
+     * 默认情况下，当一个URL不能下载，网址列入黑名单，所以库将不会继续尝试下载。
      */
     SDWebImageRetryFailed = 1 << 0,
 
     /**
      * By default, image downloads are started during UI interactions, this flags disable this feature,
      * leading to delayed download on UIScrollView deceleration for instance.
+     
+     * 图像下载的过程中UI交互启动，例如当UIScrollView等正在滚动时，延迟下载图片（放置scrollView滚动卡）
      */
     SDWebImageLowPriority = 1 << 1,
 
     /**
      * This flag disables on-disk caching
+     * 此标志禁用磁盘上缓存，只缓存到内存中
      */
     SDWebImageCacheMemoryOnly = 1 << 2,
 
     /**
      * This flag enables progressive download, the image is displayed progressively during download as a browser would do.
      * By default, the image is only displayed once completely downloaded.
+     
+     * 图片会边下边显示
      */
     SDWebImageProgressiveDownload = 1 << 3,
 
@@ -42,24 +49,30 @@ typedef NS_OPTIONS(NSUInteger, SDWebImageOptions) {
      * If a cached image is refreshed, the completion block is called once with the cached image and again with the final image.
      *
      * Use this flag only if you can't make your URLs static with embedded cache busting parameter.
+     
+     * 磁盘缓存将NSURLCache而不是SDWebImage导致轻微的性能降级处理。
      */
     SDWebImageRefreshCached = 1 << 4,
 
     /**
      * In iOS 4+, continue the download of the image if the app goes to background. This is achieved by asking the system for
      * extra time in background to let the request finish. If the background task expires the operation will be cancelled.
+     * 在后台额外的时间来下载图片。如果该后台任务过期下载将被取消。
      */
     SDWebImageContinueInBackground = 1 << 5,
 
     /**
      * Handles cookies stored in NSHTTPCookieStore by setting
      * NSMutableURLRequest.HTTPShouldHandleCookies = YES;
+     * 通过设置NSMutableURLRequest.HTTPShouldHandleCookies = YES来处理存储在NSHTTPCookieStore中的cookie
      */
     SDWebImageHandleCookies = 1 << 6,
 
     /**
      * Enable to allow untrusted SSL certificates.
      * Useful for testing purposes. Use with caution in production.
+     
+     * 启用允许不受信任的SSL证书。主要用于测试目的，在项目中谨慎使用
      */
     SDWebImageAllowInvalidSSLCertificates = 1 << 7,
 
@@ -67,12 +80,14 @@ typedef NS_OPTIONS(NSUInteger, SDWebImageOptions) {
      * By default, image are loaded in the order they were queued. This flag move them to
      * the front of the queue and is loaded immediately instead of waiting for the current queue to be loaded (which 
      * could take a while).
+     * 图像加载的操作放在队列的最前面
      */
     SDWebImageHighPriority = 1 << 8,
     
     /**
      * By default, placeholder images are loaded while the image is loading. This flag will delay the loading
      * of the placeholder image until after the image has finished loading.
+     * 该标志将延迟默认图片的加载
      */
     SDWebImageDelayPlaceholder = 1 << 9,
 

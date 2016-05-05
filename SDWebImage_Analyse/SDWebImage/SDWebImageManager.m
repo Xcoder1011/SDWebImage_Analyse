@@ -187,6 +187,8 @@
             }
             
             //downloader从网络下载的过程，下载是放在NSOperationQueue中进行的
+            /*下载选项设置*/
+            //使用imageDownloader开启网络下载
             id <SDWebImageOperation> subOperation = [self.imageDownloader downloadImageWithURL:url options:downloaderOptions progress:progressBlock completed:^(UIImage *downloadedImage, NSData *data, NSError *error, BOOL finished) {
                 __strong __typeof(weakOperation) strongOperation = weakOperation;
                 if (!strongOperation || strongOperation.isCancelled) {

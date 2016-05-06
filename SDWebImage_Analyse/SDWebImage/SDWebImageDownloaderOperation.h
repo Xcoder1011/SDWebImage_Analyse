@@ -68,6 +68,7 @@ extern NSString *const SDWebImageDownloadFinishNotification;
  *  @param cancelBlock    the block executed if the download (operation) is cancelled
  *
  *  @return the initialized instance
+ *  它主要的功能是创建一个下载线程去下载图片，并保持回调的block
  */
 - (id)initWithRequest:(NSURLRequest *)request
               options:(SDWebImageDownloaderOptions)options

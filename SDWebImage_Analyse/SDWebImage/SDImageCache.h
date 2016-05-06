@@ -33,6 +33,8 @@ typedef void(^SDWebImageCalculateSizeBlock)(NSUInteger fileCount, NSUInteger tot
 /**
  * SDImageCache maintains a memory cache and an optional disk cache. Disk cache write operations are performed
  * asynchronous so it doesn’t add unnecessary latency to the UI.
+ 
+ * 其中内存缓存采用NSCache，同时会创建一个ioQueue负责对硬盘的读写，并且会添加观察者，在收到内存警告、关闭或进入后台时完成对应的处理:
  */
 @interface SDImageCache : NSObject
 

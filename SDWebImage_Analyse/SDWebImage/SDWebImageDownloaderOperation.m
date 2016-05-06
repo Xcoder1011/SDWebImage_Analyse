@@ -76,6 +76,7 @@ NSString *const SDWebImageDownloadFinishNotification = @"SDWebImageDownloadFinis
 #if TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0
         Class UIApplicationClass = NSClassFromString(@"UIApplication");
         BOOL hasApplication = UIApplicationClass && [UIApplicationClass respondsToSelector:@selector(sharedApplication)];
+         //开启后台下载
         if (hasApplication && [self shouldContinueWhenAppEntersBackground]) {
             __weak __typeof__ (self) wself = self;
             UIApplication * app = [UIApplicationClass performSelector:@selector(sharedApplication)];
@@ -103,6 +104,7 @@ NSString *const SDWebImageDownloadFinishNotification = @"SDWebImageDownloadFinis
         if (self.progressBlock) {
             self.progressBlock(0, NSURLResponseUnknownLength);
         }
+        //在主线程发通知，这样也保证在主线程收到通知
         dispatch_async(dispatch_get_main_queue(), ^{
             [[NSNotificationCenter defaultCenter] postNotificationName:SDWebImageDownloadStartNotification object:self];
         });
@@ -114,6 +116,7 @@ NSString *const SDWebImageDownloadFinishNotification = @"SDWebImageDownloadFinis
             CFRunLoopRunInMode(kCFRunLoopDefaultMode, 10, false);
         }
         else {
+            //在默认模式下运行当前runlooprun，直到调用CFRunLoopStop停止运行
             CFRunLoopRun();
         }
 
@@ -250,6 +253,7 @@ NSString *const SDWebImageDownloadFinishNotification = @"SDWebImageDownloadFinis
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
+    //将接收到的数据保存到NSMutableData中
     [self.imageData appendData:data];
 
     if ((self.options & SDWebImageDownloaderProgressiveDownload) && self.expectedSize > 0 && self.completedBlock) {
@@ -381,6 +385,8 @@ NSString *const SDWebImageDownloadFinishNotification = @"SDWebImageDownloadFinis
         if (self.options & SDWebImageDownloaderIgnoreCachedResponse && responseFromCached) {
             completionBlock(nil, nil, nil, YES);
         } else if (self.imageData) {
+            //下载完成后在该线程完成图片的解码，并在完成的completionBlock中进行imageCache的缓存：
+            // 下载成功的图片会被解压缩，这样在图片渲染到屏幕上，可以比正常的二进制图片数据渲染减少一个步骤，可以提升体验
             UIImage *image = [UIImage sd_imageWithData:self.imageData];
             NSString *key = [[SDWebImageManager sharedManager] cacheKeyForURL:self.request.URL];
             image = [self scaledImageForKey:key image:image];
@@ -388,7 +394,7 @@ NSString *const SDWebImageDownloadFinishNotification = @"SDWebImageDownloadFinis
             // Do not force decoding animated GIFs
             if (!image.images) {
                 if (self.shouldDecompressImages) {
-                    image = [UIImage decodedImageWithImage:image];
+                    image = [UIImage decodedImageWithImage:image]; //图片解码
                 }
             }
             if (CGSizeEqualToSize(image.size, CGSizeZero)) {

@@ -61,10 +61,12 @@ static NSString *const kCompletedCallbackKey = @"completed";
 
 - (id)init {
     if ((self = [super init])) {
+        // 下载完整，下载失败等过程结束后，都会根据key在将其在可变字典里的记录移除掉
         _operationClass = [SDWebImageDownloaderOperation class];
         _shouldDecompressImages = YES;
         _executionOrder = SDWebImageDownloaderFIFOExecutionOrder;
         _downloadQueue = [NSOperationQueue new];
+        // 由于这里的可变字典，可能会比较大，因为并发下载线程同时最多6个
         _downloadQueue.maxConcurrentOperationCount = 6;
         _URLCallbacks = [NSMutableDictionary new];
 #ifdef SD_WEBP
@@ -72,8 +74,11 @@ static NSString *const kCompletedCallbackKey = @"completed";
 #else
         _HTTPHeaders = [@{@"Accept": @"image/*;q=0.8"} mutableCopy];
 #endif
-        _barrierQueue = dispatch_queue_create("com.hackemist.SDWebImageDownloaderBarrierQueue", DISPATCH_QUEUE_CONCURRENT);
-        _downloadTimeout = 15.0;
+        
+        // 这里对字典的操作，都是互斥的，并且放在一个gcd线程里，
+        // 用 dispatch_barrier_sync 同步调用
+        _barrierQueue = dispatch_queue_create("com.hackemist.SDWebImageDownloaderBarrierQueue", DISPATCH_QUEUE_CONCURRENT); // 并行队列
+        _downloadTimeout = 15.0; //
     }
     return self;
 }
@@ -171,6 +176,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
                                                         cancelled:^{
                                                             SDWebImageDownloader *sself = wself;
                                                             if (!sself) return;
+                                                            // 移除的时候，dispatch_barrier_async 异步（不需要关注顺序）
                                                             dispatch_barrier_async(sself.barrierQueue, ^{
                                                                 [sself.URLCallbacks removeObjectForKey:url];
                                                             });
@@ -204,6 +210,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
 
 - (void)addProgressCallback:(SDWebImageDownloaderProgressBlock)progressBlock completedBlock:(SDWebImageDownloaderCompletedBlock)completedBlock forURL:(NSURL *)url createCallback:(SDWebImageNoParamsBlock)createCallback {
     // The URL will be used as the key to the callbacks dictionary so it cannot be nil. If it is nil immediately call the completed block with no image or data.
+    // url不能为nil,如果是nil将调用无图像或数据块的block
     if (url == nil) {
         if (completedBlock != nil) {
             completedBlock(nil, nil, nil, NO);
@@ -211,7 +218,9 @@ static NSString *const kCompletedCallbackKey = @"completed";
         return;
     }
 
+    // 用dispatch_barrier_sync 同步 方式调用 (需要关注顺序)
     dispatch_barrier_sync(self.barrierQueue, ^{
+        // 避免重复的下载请求
         BOOL first = NO;
         if (!self.URLCallbacks[url]) {
             self.URLCallbacks[url] = [NSMutableArray new];
@@ -219,6 +228,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
         }
 
         // Handle single download of simultaneous download request for the same URL
+        // 处理下载请求相同的URL
         NSMutableArray *callbacksForURL = self.URLCallbacks[url];
         NSMutableDictionary *callbacks = [NSMutableDictionary new];
         if (progressBlock) callbacks[kProgressCallbackKey] = [progressBlock copy];
@@ -226,6 +236,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
         [callbacksForURL addObject:callbacks];
         self.URLCallbacks[url] = callbacksForURL;
 
+        // 这里用可变字典管理下载任务列表有另外一个好处，就是重复的下载请求可以避免
         if (first) {
             createCallback();
         }

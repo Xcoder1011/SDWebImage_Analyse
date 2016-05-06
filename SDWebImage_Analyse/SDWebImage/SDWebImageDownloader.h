@@ -74,6 +74,9 @@ typedef NSDictionary *(^SDWebImageDownloaderHeadersFilterBlock)(NSURL *url, NSDi
 
 /**
  * Asynchronous downloader dedicated and optimized for image loading.
+ 
+ *  这个类负责管理下载operation, 它是个单例，负责管理并发下载operationqueue
+ *  该类维护了一个由下载url作为key构成的可变字典
  */
 @interface SDWebImageDownloader : NSObject
 

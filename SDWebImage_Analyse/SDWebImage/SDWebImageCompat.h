@@ -57,6 +57,8 @@ typedef void(^SDWebImageNoParamsBlock)();
 
 extern NSString *const SDWebImageErrorDomain;
 
+
+// 图像的绘制只能在主线程完成, 所以, dispatch_main_sync_safe 就是为了保证 block 能在主线程中执行.
 #define dispatch_main_sync_safe(block)\
     if ([NSThread isMainThread]) {\
         block();\

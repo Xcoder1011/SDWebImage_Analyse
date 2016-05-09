@@ -85,6 +85,8 @@ static char TAG_ACTIVITY_SHOW;
                 }
             });
         }];
+        // 返回 operation 的同时, 也会向 operationDictionary 中添加一个键值对, 来表示操作的正在进行:
+        // 它将 opertion 存储到 operationDictionary 中方便以后的 cancel.
         [self sd_setImageLoadOperation:operation forKey:@"UIImageViewImageLoad"];
     } else {
         dispatch_main_async_safe(^{

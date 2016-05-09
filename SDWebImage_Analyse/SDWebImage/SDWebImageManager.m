@@ -107,6 +107,10 @@
     }];
 }
 
+/*
+ * 用于处理异步下载和图片缓存的类,
+ * 这个类的主要作用就是为 UIImageView+WebCache 和 SDWebImageDownloader, SDImageCache 之间构建一个桥梁,
+ */
 - (id <SDWebImageOperation>)downloadImageWithURL:(NSURL *)url
                                          options:(SDWebImageOptions)options
                                         progress:(SDWebImageDownloaderProgressBlock)progressBlock
@@ -114,17 +118,18 @@
     // Invoking this method without a completedBlock is pointless
     NSAssert(completedBlock != nil, @"If you mean to prefetch the image, use -[SDWebImagePrefetcher prefetchURLs] instead");
 
-    // Very common mistake is to send the URL using NSString object instead of NSURL. For some strange reason, XCode won't
-    // throw any warning for this type mismatch. Here we failsafe this error by allowing URLs to be passed as NSString.
+    // 确定 url 是否被正确传入, 如果传入参数的是 NSString 类型就会被转换为 NSURL. 如果转换失败, 那么 url 会被赋值为空,
     if ([url isKindOfClass:NSString.class]) {
         url = [NSURL URLWithString:(NSString *)url];
     }
 
-    // Prevents app crashing on argument type error like sending NSNull instead of NSURL
     if (![url isKindOfClass:NSURL.class]) {
         url = nil;
     }
 
+    // 实例化一个遵循 SDWebImageOperation 协议的 NSObject 的子类
+    // 这里仅仅是将这个 SDWebImageOperation 类包装成一个看着像 NSOperation,
+    // 其实并不是 NSOperation 的类, 而这个类唯一与 NSOperation 的相同之处就是它们都可以响应 cancel 方法
     __block SDWebImageCombinedOperation *operation = [SDWebImageCombinedOperation new];
     __weak SDWebImageCombinedOperation *weakOperation = operation;
 
@@ -149,7 +154,8 @@
     //根据URL生成对应的key，没有特殊处理为[url absoluteString];
     NSString *key = [self cacheKeyForURL:url];
 
-     //去imageCache中寻找图片
+     // 去imageCache中寻找图片:根据 key 在缓存中查找以前是否下载过相同的图片.
+
     operation.cacheOperation = [self.imageCache queryDiskCacheForKey:key done:^(UIImage *image, SDImageCacheType cacheType) {
         if (operation.isCancelled) {
             @synchronized (self.runningOperations) {
@@ -245,7 +251,8 @@
                     }
                     else {
                         if (downloadedImage && finished) {
-                            //下载完成后，先将图片保存到imageCache中，然后主线程返回
+                            // 下载完成后，先将图片保存到imageCache中，然后主线程返回
+                            // 在全局的缓存中存储这个图片的数据
                             [self.imageCache storeImage:downloadedImage recalculateFromImage:NO imageData:data forKey:key toDisk:cacheOnDisk];
                         }
 
@@ -266,6 +273,7 @@
                 }
             }];
             operation.cancelBlock = ^{
+                // 调用SDWebImageOperation类的 cancel 方法, 会使得它持有的两个 operation 都被 cancel.
                 [subOperation cancel];
                 
                 @synchronized (self.runningOperations) {

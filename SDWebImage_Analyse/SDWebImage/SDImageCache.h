@@ -35,6 +35,7 @@ typedef void(^SDWebImageCalculateSizeBlock)(NSUInteger fileCount, NSUInteger tot
  * asynchronous so it doesn’t add unnecessary latency to the UI.
  
  * 其中内存缓存采用NSCache，同时会创建一个ioQueue负责对硬盘的读写，并且会添加观察者，在收到内存警告、关闭或进入后台时完成对应的处理:
+ * 它维护了一个内存缓存和一个可选的磁盘缓存
  */
 @interface SDImageCache : NSObject
 

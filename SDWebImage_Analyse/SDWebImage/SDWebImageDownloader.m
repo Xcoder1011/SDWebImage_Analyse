@@ -121,6 +121,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
     __block SDWebImageDownloaderOperation *operation;
     __weak __typeof(self)wself = self;
 
+    // 下载的操作添加回调的块
     [self addProgressCallback:progressBlock completedBlock:completedBlock forURL:url createCallback:^{
         NSTimeInterval timeoutInterval = wself.downloadTimeout;
         if (timeoutInterval == 0.0) {
@@ -128,12 +129,12 @@ static NSString *const kCompletedCallbackKey = @"completed";
             // 默认maxConcurrentOperationCount为6，timeout时间为15s
         }
 
-        // In order to prevent from potential duplicate caching (NSURLCache + SDImageCache) we disable the cache for image requests if told otherwise
-        
+
         // 防止NSURLCache和SDImageCache重复缓存
         NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url cachePolicy:(options & SDWebImageDownloaderUseNSURLCache ? NSURLRequestUseProtocolCachePolicy : NSURLRequestReloadIgnoringLocalCacheData) timeoutInterval:timeoutInterval];
         request.HTTPShouldHandleCookies = (options & SDWebImageDownloaderHandleCookies);
         request.HTTPShouldUsePipelining = YES;
+        // 1.初始化一个request ，用于在之后发送 HTTP 请求
         if (wself.headersFilter) {
             request.allHTTPHeaderFields = wself.headersFilter(url, [wself.HTTPHeaders copy]);
         }
@@ -142,6 +143,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
         }
         
         // SDWebImageDownloaderOperation派生自NSOperation，负责图片下载工作
+        // 2.初始化一个SDWebImageDownloaderOperation的实例 ，用于请求网络资源的操作
         operation = [[wself.operationClass alloc] initWithRequest:request
                                                           options:options
                                                          progress:^(NSInteger receivedSize, NSInteger expectedSize) {
@@ -209,7 +211,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
 }
 
 - (void)addProgressCallback:(SDWebImageDownloaderProgressBlock)progressBlock completedBlock:(SDWebImageDownloaderCompletedBlock)completedBlock forURL:(NSURL *)url createCallback:(SDWebImageNoParamsBlock)createCallback {
-    // The URL will be used as the key to the callbacks dictionary so it cannot be nil. If it is nil immediately call the completed block with no image or data.
+
     // url不能为nil,如果是nil将调用无图像或数据块的block
     if (url == nil) {
         if (completedBlock != nil) {
@@ -221,14 +223,17 @@ static NSString *const kCompletedCallbackKey = @"completed";
     // 用dispatch_barrier_sync 同步 方式调用 (需要关注顺序)
     dispatch_barrier_sync(self.barrierQueue, ^{
         // 避免重复的下载请求
+        // 先查看这个 url 是否有对应的 callback, 使用的是 downloader 持有的一个字典 URLCallbacks.
         BOOL first = NO;
         if (!self.URLCallbacks[url]) {
             self.URLCallbacks[url] = [NSMutableArray new];
+            // 如果是第一次添加回调的话, 就会执行 first = YES
             first = YES;
+            // first 不为 YES 那么 HTTP 请求就不会被初始化, 图片也无法被获取
         }
 
-        // Handle single download of simultaneous download request for the same URL
         // 处理下载请求相同的URL
+        // 然后, 在这个方法中会重新修正在 URLCallbacks 中存储的回调块.
         NSMutableArray *callbacksForURL = self.URLCallbacks[url];
         NSMutableDictionary *callbacks = [NSMutableDictionary new];
         if (progressBlock) callbacks[kProgressCallbackKey] = [progressBlock copy];
@@ -238,6 +243,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
 
         // 这里用可变字典管理下载任务列表有另外一个好处，就是重复的下载请求可以避免
         if (first) {
+            //如果是第一次添加回调块, 那么就会直接运行这个 createCallback 这个 block
             createCallback();
         }
     });

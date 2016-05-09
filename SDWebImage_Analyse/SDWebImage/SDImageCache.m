@@ -404,6 +404,8 @@ FOUNDATION_STATIC_INLINE NSUInteger SDCacheCostForImage(UIImage *image) {
     return SDScaledImageForKey(key, image);
 }
 
+// 根据 key 在缓存中查找以前是否下载过相同的图片
+// 异步的查询图片缓存. 因为图片的缓存可能在两个地方, 而该方法首先会在内存中查找是否有图片的缓存.
 - (NSOperation *)queryDiskCacheForKey:(NSString *)key done:(SDWebImageQueryCompletedBlock)doneBlock {
     if (!doneBlock) {
         return nil;
@@ -422,24 +424,24 @@ FOUNDATION_STATIC_INLINE NSUInteger SDCacheCostForImage(UIImage *image) {
         return nil;
     }
 
-    //硬盘查找
+    //如果没有,则在磁盘中查找
     NSOperation *operation = [NSOperation new];
     dispatch_async(self.ioQueue, ^{
         if (operation.isCancelled) {
             return;
         }
 
-        //如果没有,则在ioQueue中去硬盘中查找，其中文件名是是根据URL生成的MD5值，找到之后先将图片缓存在内存中，然后在把图片返回
+        //如果没有,则在磁盘中查找，其中文件名是是根据URL生成的MD5值，找到之后先将图片缓存在内存中，然后在把图片返回
         @autoreleasepool {//创建自动释放池，内存及时释放
+            
             UIImage *diskImage = [self diskImageForKey:key];
             if (diskImage && self.shouldCacheImagesInMemory) {
                 // 将图片保存到NSCache中，并把图片像素大小作为该对象的cost值
                 NSUInteger cost = SDCacheCostForImage(diskImage);
-                 //缓存到NSCache中
+                // 如果在磁盘中查找到对应的图片, 我们会将它复制到内存中, 以便下次的使用.
                 [self.memCache setObject:diskImage forKey:key cost:cost];
             }
-            //如果不想SDImageCache查询磁盘缓存，你可以调用另一个方法：imageFromMemoryCacheForKey:。
-
+            
             dispatch_async(dispatch_get_main_queue(), ^{
                 doneBlock(diskImage, SDImageCacheTypeDisk);
             });
